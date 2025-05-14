@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sopa de Letras</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.10/babel.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Componente principal
+        function SopaDeLetras() {
+            // Estado para el nivel de dificultad
+            const [dificultad, setDificultad] = React.useState('facil');
+            
+            // Estado para modo final (cuando quedan 25% o menos palabras)
+            const [modoFinal, setModoFinal] = React.useState(false);
+            
+            // Estado para las monedas ganadas
+            const [monedas, setMonedas] = React.useState(0);
+            
+            // Configuraciones según dificultad
+            const configuraciones = {
+                facil: {
+                    filas: 10,
+                    columnas: 10,
+                    tiempo: 120, // 2 minutos
+                    palabras: [
+                        "JAVASCRIPT",
+                        "REACT",
+                        "HTML",
+                        "CSS",
+                        "CODIGO",
+                        "WEB",
+                        "JUEGO",
+                        "SOPA",
+                        "LETRAS",
+                        "MOUSE"
+                    ]
+                },
+                medio: {
+                    filas: 15,
+                    columnas: 15,
+                    tiempo: 180, // 3 minutos
+                    palabras: [
+                        "JAVASCRIPT",
+                        "REACT",
+                        "HTML",
+                        "CSS",
+                        "CODIGO",
+                        "WEB",
+                        "JUEGO",
+                        "SOPA",
+                        "LETRAS",
+                        "MOUSE",
+                        "FRAMEWORK",
+                        "SERVIDOR",
+                        "CLIENTE",
+                        "DATOS",
+                        "FUNCION"
+                    ]
+                },
+                dificil: {
+                    filas: 20,
+                    columnas: 20,
+                    tiempo: 240, // 4 minutos
+                    palabras: [
+                        "JAVASCRIPT",
+                        "REACT",
+                        "HTML",
+                        "CSS",
+                        "CODIGO",
+                        "WEB",
+                        "JUEGO",
+                        "SOPA",
+                        "LETRAS",
+                        "MOUSE",
+                        "FRAMEWORK",
+                        "SERVIDOR",
+                        "CLIENTE",
+                        "DATOS",
+                        "FUNCION",
+                        "ALGORITMO",
+                        "INTERFAZ",
+                        "VARIABLE",
+                        "PROGRAMACION",
+                        "COMPONENTE"
+                    ]
+                }
+            };
+            
+            // Obtener configuración actual
+            const config = configuraciones[dificultad];
+            
+            // Estados para el juego
+            const [grid, setGrid] = React.useState([]);
+            const [seleccion, setSeleccion] = React.useState([]);
+            const [palabrasEncontradas, setPalabrasEncontradas] = React.useState([]);
+            const [tiempoRestante, setTiempoRestante] = React.useState(config.tiempo);
+            const [mostrarCarga, setMostrarCarga] = React.useState(false);
+            const [progresoCarga, setProgresoCarga] = React.useState(0);
+            const [mousePresionado, setMousePresionado] = React.useState(false);
+            const [temporizadorPausado, setTemporizadorPausado] = React.useState(false);
+            
+            // Función para generar la sopa de letras
+            const generarSopa = () => {
+                // Crear una matriz vacía con el tamaño actual
+                let nuevaGrid = Array(config.filas).fill().map(() => Array(config.columnas).fill(''));
+                
+                // Colocar palabras en la cuadrícula
+                const direcciones = [
+                    [0, 1],  // horizontal
+                    [1, 0],  // vertical
+                    [1, 1],  // diagonal hacia abajo-derecha
+                    [-1, 1], // diagonal hacia arriba-derecha
+                ];
+                
+                // Intentar colocar cada palabra
+                config.palabras.forEach(palabra => {
+                    let colocada = false;
+                    let intentos = 0;
+                    
+                    while (!colocada && intentos < 100) {
+                        intentos++;
+                        // Elegir dirección al azar
+                        const dir = direcciones[Math.floor(Math.random() * direcciones.length)];
+                        // Posición inicial al azar
+                        const fila = Math.floor(Math.random() * config.filas);
+                        const col = Math.floor(Math.random() * config.columnas);
+                        
+                        // Verificar si la palabra cabe en esa dirección
+                        if (
+                            (dir[0] >= 0 && fila + palabra.length * dir[0] <= config.filas) ||
+                            (dir[0] < 0 && fila + palabra.length * dir[0] >= -1)
+                        ) {
+                            if (
+                                (dir[1] >= 0 && col + palabra.length * dir[1] <= config.columnas) ||
+                                (dir[1] < 0 && col + palabra.length * dir[1] >= -1)
+                            ) {
+                                // Verificar si se puede colocar (no hay conflicto con otras palabras)
+                                let puedePoner = true;
+                                for (let i = 0; i < palabra.length; i++) {
+                                    const r = fila + i * dir[0];
+                                    const c = col + i * dir[1];
+                                    if (nuevaGrid[r][c] !== '' && nuevaGrid[r][c] !== palabra[i]) {
+                                        puedePoner = false;
+                                        break;
+                                    }
+                                }
+                                
+                                // Si se puede colocar, colocar la palabra
+                                if (puedePoner) {
+                                    for (let i = 0; i < palabra.length; i++) {
+                                        const r = fila + i * dir[0];
+                                        const c = col + i * dir[1];
+                                        nuevaGrid[r][c] = palabra[i];
+                                    }
+                                    colocada = true;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Llenar espacios vacíos con letras aleatorias
+                const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                for (let i = 0; i < config.filas; i++) {
+                    for (let j = 0; j < config.columnas; j++) {
+                        if (nuevaGrid[i][j] === '') {
+                            nuevaGrid[i][j] = letras.charAt(Math.floor(Math.random() * letras.length));
+                        }
+                    }
+                }
+                
+                setGrid(nuevaGrid);
+            };
+            
+            // Efecto para reiniciar el tiempo cuando cambia la dificultad
+            React.useEffect(() => {
+                setTiempoRestante(config.tiempo);
+                generarSopa();
+            }, [dificultad]);
+            
+            // Efecto para inicializar el juego
+            React.useEffect(() => {
+                generarSopa();
+            }, []);
+            
+            // Efecto para el temporizador de cambio de letras
+            React.useEffect(() => {
+                // Si el juego está completado o en modo final, no ejecutar el temporizador
+                if (temporizadorPausado || modoFinal) return;
+                
+                const intervalo = setInterval(() => {
+                    setTiempoRestante(prev => {
+                        if (prev <= 1) {
+                            // Mostrar la barra de carga cuando el tiempo llegue a 0
+                            setMostrarCarga(true);
+                            // Reiniciar el temporizador
+                            return config.tiempo;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+                
+                return () => clearInterval(intervalo);
+            }, [temporizadorPausado, modoFinal, config.tiempo]);
+            
+            // Efecto para la barra de carga
+            React.useEffect(() => {
+                if (mostrarCarga) {
+                    // Incrementar el progreso gradualmente durante 4 segundos
+                    const intervalo = setInterval(() => {
+                        setProgresoCarga(prev => {
+                            if (prev >= 100) {
+                                // La barra se completó
+                                clearInterval(intervalo);
+                                // Generar una nueva sopa de letras
+                                generarSopa();
+                                // Ocultar la barra de carga
+                                setMostrarCarga(false);
+                                // Reiniciar el progreso
+                                setTimeout(() => setProgresoCarga(0), 500);
+                                return 100;
+                            }
+                            return prev + 2.5; // 100% / 4 segundos / 10 (porque el intervalo es de 100ms)
+                        });
+                    }, 100);
+                    
+                    return () => clearInterval(intervalo);
+                }
+            }, [mostrarCarga]);
+            
+            // Efecto para verificar cuando se completa el juego
+            React.useEffect(() => {
+                // Si todas las palabras han sido encontradas, pausar el temporizador
+                if (palabrasEncontradas.length === config.palabras.length) {
+                    setTemporizadorPausado(true);
+                    setModoFinal(false);
+                }
+                
+                // Activar modo final cuando quedan 25% o menos palabras
+                const palabrasRestantes = config.palabras.length - palabrasEncontradas.length;
+                const umbralModoFinal = Math.ceil(config.palabras.length * 0.25);
+                
+                if (palabrasRestantes <= umbralModoFinal && palabrasRestantes > 0) {
+                    setModoFinal(true);
+                } else {
+                    setModoFinal(false);
+                }
+            }, [palabrasEncontradas, config.palabras]);
+            
+            // Función para generar letras aleatorias para el modo final
+            const generarLetrasAleatorias = () => {
+                if (!modoFinal || temporizadorPausado) return;
+                
+                // Crear una copia de la cuadrícula actual
+                const nuevaGrid = [...grid];
+                const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                
+                // Obtener posiciones de las palabras que aún no se han encontrado
+                const posicionesPalabras = new Set();
+                
+                // Para cada palabra no encontrada, determinar sus posiciones en la cuadrícula
+                config.palabras.forEach(palabra => {
+                    if (!palabrasEncontradas.includes(palabra)) {
+                        // Buscar la palabra en todas las direcciones y posiciones
+                        for (let i = 0; i < config.filas; i++) {
+                            for (let j = 0; j < config.columnas; j++) {
+                                // Verificar horizontal derecha
+                                if (j + palabra.length <= config.columnas) {
+                                    let coincide = true;
+                                    for (let k = 0; k < palabra.length; k++) {
+                                        if (grid[i][j+k] !== palabra[k]) {
+                                            coincide = false;
+                                            break;
+                                        }
+                                    }
+                                    if (coincide) {
+                                        for (let k = 0; k < palabra.length; k++) {
+                                            posicionesPalabras.add(`${i},${j+k}`);
+                                        }
+                                    }
+                                }
+                                
+                                // Verificar vertical abajo
+                                if (i + palabra.length <= config.filas) {
+                                    let coincide = true;
+                                    for (let k = 0; k < palabra.length; k++) {
+                                        if (grid[i+k][j] !== palabra[k]) {
+                                            coincide = false;
+                                            break;
+                                        }
+                                    }
+                                    if (coincide) {
+                                        for (let k = 0; k < palabra.length; k++) {
+                                            posicionesPalabras.add(`${i+k},${j}`);
+                                        }
+                                    }
+                                }
+                                
+                                // Verificar diagonal abajo-derecha
+                                if (i + palabra.length <= config.filas && j + palabra.length <= config.columnas) {
+                                    let coincide = true;
+                                    for (let k = 0; k < palabra.length; k++) {
+                                        if (grid[i+k][j+k] !== palabra[k]) {
+                                            coincide = false;
+                                            break;
+                                        }
+                                    }
+                                    if (coincide) {
+                                        for (let k = 0; k < palabra.length; k++) {
+                                            posicionesPalabras.add(`${i+k},${j+k}`);
+                                        }
+                                    }
+                                }
+                                
+                                // Verificar diagonal arriba-derecha
+                                if (i - palabra.length >= -1 && j + palabra.length <= config.columnas) {
+                                    let coincide = true;
+                                    for (let k = 0; k < palabra.length; k++) {
+                                        if (grid[i-k][j+k] !== palabra[k]) {
+                                            coincide = false;
+                                            break;
+                                        }
+                                    }
+                                    if (coincide) {
+                                        for (let k = 0; k < palabra.length; k++) {
+                                            posicionesPalabras.add(`${i-k},${j+k}`);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Cambiar aleatoriamente algunas letras (excepto las que forman parte de palabras no encontradas)
+                for (let i = 0; i < config.filas; i++) {
+                    for (let j = 0; j < config.columnas; j++) {
+                        // Verificar si la posición actual no es parte de una palabra no encontrada
+                        if (!posicionesPalabras.has(`${i},${j}`)) {
+                            // 40% de probabilidad de cambiar la letra
+                            if (Math.random() < 0.4) {
+                                nuevaGrid[i][j] = letras.charAt(Math.floor(Math.random() * letras.length));
+                            }
+                        }
+                    }
+                }
+                
+                setGrid(nuevaGrid);
+            };
+            
+            // Efecto para el cambio constante de letras en modo final
+            React.useEffect(() => {
+                let intervalo;
+                
+                if (modoFinal && !temporizadorPausado) {
+                    intervalo = setInterval(() => {
+                        generarLetrasAleatorias();
+                    }, 1500); // Cambiar cada 1.5 segundos
+                }
+                
+                return () => {
+                    if (intervalo) clearInterval(intervalo);
+                };
+            }, [modoFinal, temporizadorPausado, grid]);
+            
+            // Función para agregar una letra a la selección
+            const agregarLetraASeleccion = (fila, col) => {
+                // Formato de coordenadas: "fila,columna"
+                const coordenada = `${fila},${col}`;
+                
+                // Si ya está seleccionada, no hacer nada
+                if (seleccion.some(item => item.coordenada === coordenada)) {
+                    return;
+                }
+                
+                // Agregar a la selección
+                const nuevaSeleccion = [...seleccion, { 
+                    coordenada, 
+                    fila, 
+                    col, 
+                    letra: grid[fila][col] 
+                }];
+                
+                setSeleccion(nuevaSeleccion);
+                
+                // Comprobar si forma una palabra
+                const palabraSeleccionada = nuevaSeleccion.map(item => item.letra).join('');
+                
+                // Comprobar si la palabra está en la lista y no ha sido encontrada
+                if (
+                    config.palabras.includes(palabraSeleccionada) && 
+                    !palabrasEncontradas.includes(palabraSeleccionada)
+                ) {
+                    // Agregar a palabras encontradas
+                    setPalabrasEncontradas(prev => [...prev, palabraSeleccionada]);
+                    // Incrementar las monedas
+                    setMonedas(prev => prev + 1);
+                    // Limpiar selección
+                    setSeleccion([]);
+                }
+            };
+            
+            // Manejadores para eventos de ratón
+            const iniciarSeleccion = () => {
+                setMousePresionado(true);
+                // Limpiar la selección previa al iniciar una nueva
+                setSeleccion([]);
+            };
+            
+            const terminarSeleccion = () => {
+                setMousePresionado(false);
+            };
+            
+            const entrarEnCelda = (fila, col) => {
+                if (mousePresionado && !mostrarCarga) {
+                    agregarLetraASeleccion(fila, col);
+                }
+            };
+            
+            const manejarClic = (fila, col) => {
+                agregarLetraASeleccion(fila, col);
+            };
+            
+            // Función para verificar si una coordenada está seleccionada
+            const estaSeleccionada = (fila, col) => {
+                return seleccion.some(item => item.coordenada === `${fila},${col}`);
+            };
+            
+            // Función para cambiar la dificultad
+            const cambiarDificultad = (nuevaDificultad) => {
+                // Reiniciar juego con la nueva dificultad
+                setDificultad(nuevaDificultad);
+                setPalabrasEncontradas([]);
+                setSeleccion([]);
+                setTemporizadorPausado(false);
+                setMostrarCarga(false);
+                setProgresoCarga(0);
+                setModoFinal(false);
+                // No reiniciar las monedas al cambiar dificultad
+            }; 
+            
+            // Función para verificar si el juego está completado
+            const juegoCompletado = palabrasEncontradas.length === config.palabras.length;
+            
+            // Reiniciar el juego
+            const reiniciarJuego = () => {
+                setSeleccion([]);
+                setPalabrasEncontradas([]);
+                generarSopa();
+                setTiempoRestante(config.tiempo);
+                setTemporizadorPausado(false);
+                setModoFinal(false);
+                
+                // Perder monedas si se reinicia sin completar el juego
+                if (!juegoCompletado) {
+                    setMonedas(0);
+                }
+            };
+            
+            // Formatear el tiempo restante (mm:ss)
+            const formatearTiempo = (segundos) => {
+                const minutos = Math.floor(segundos / 60);
+                const segs = segundos % 60;
+                return `${minutos.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
+            };
+            
+            // Calcular tamaño de celda basado en la dificultad
+            const tamañoCelda = dificultad === 'facil' ? 'w-10 h-10' : 
+                                dificultad === 'medio' ? 'w-8 h-8' : 'w-6 h-6';
+                                
+            // Calcular tamaño de texto basado en la dificultad                    
+            const tamañoTexto = dificultad === 'facil' ? 'text-lg' : 
+                                dificultad === 'medio' ? 'text-base' : 'text-xs';
+            
+            // Calcular estilo de celda según el modo de juego
+            const getEstiloCelda = (fila, col) => {
+                if (estaSeleccionada(fila, col)) {
+                    return 'bg-yellow-300'; // Celda seleccionada
+                } else if (modoFinal) {
+                    return 'bg-black text-white'; // Modo final (último desafío)
+                } else {
+                    return 'bg-green-300'; // Modo normal
+                }
+            };
+            
+            // Calcular el porcentaje de palabras restantes
+            const porcentajePalabrasRestantes = ((config.palabras.length - palabrasEncontradas.length) / config.palabras.length * 100).toFixed(0);
+            
+            return (
+                <div className="flex flex-col items-center p-4 bg-gray-100 min-h-screen relative"
+                    onMouseUp={terminarSeleccion}
+                    onMouseLeave={terminarSeleccion}>
+                    <h1 className="text-3xl font-bold mb-4 text-blue-600">Sopa de Letras</h1>
+
+                    {/* Contador de monedas */}
+                    <div className="absolute top-4 left-4 p-2 rounded shadow bg-yellow-500 text-white flex items-center">
+                        <svg className="w-6 h-6 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM5.64 13.7a6 6 0 1110.72-5.4 6 6 0 01-10.72 5.4z" fillRule="evenodd" />
+                            <path d="M11 8a1 1 0 00-2 0v2a1 1 0 002 0V8zm-1-5a7 7 0 100 14 7 7 0 000-14z" fillRule="evenodd" />
+                        </svg>
+                        <p className="font-bold">{monedas}</p>
+                    </div>
+
+                    {/* Selector de dificultad */}
+                    <div className="mb-6 flex space-x-4">
+                        <button 
+                            className={`px-4 py-2 rounded font-bold transition-colors ${dificultad === 'facil' ? 'bg-blue-600 text-white' : 'bg-gray-300 hover:bg-gray-400'}`}
+                            onClick={() => cambiarDificultad('facil')}
+                        >
+                            Fácil (10x10)
+                        </button>
+                        <button 
+                            className={`px-4 py-2 rounded font-bold transition-colors ${dificultad === 'medio' ? 'bg-blue-600 text-white' : 'bg-gray-300 hover:bg-gray-400'}`}
+                            onClick={() => cambiarDificultad('medio')}
+                        >
+                            Medio (15x15)
+                        </button>
+                        <button 
+                            className={`px-4 py-2 rounded font-bold transition-colors ${dificultad === 'dificil' ? 'bg-blue-600 text-white' : 'bg-gray-300 hover:bg-gray-400'}`}
+                            onClick={() => cambiarDificultad('dificil')}
+                        >
+                            Difícil (20x20)
+                        </button>
+                    </div>
+                    
+                    {/* Botón para reiniciar el juego */}
+                    <button 
+                        className={`${modoFinal ? 'bg-red-600 hover:bg-red-800' : 'bg-blue-500 hover:bg-blue-700'} text-white font-bold py-2 px-4 rounded`}
+                        onClick={reiniciarJuego}
+                    >
+                        {modoFinal ? '¡REINICIAR!' : 'Reiniciar Juego'}
+                    </button>
+                    
+                    {/* Instrucciones de juego */}
+                    <div className="mb-4 bg-blue-100 p-2 rounded shadow">
+                        <p className="text-sm">Selecciona letras haciendo clic o manteniendo presionado el mouse y arrastrando</p>
+                    </div>
+                    
+                    {/* Tablero de juego */}
+                    <div className="mb-6 overflow-auto max-w-full">
+                        <div className="inline-block">
+                            {grid.map((fila, indexFila) => (
+                                <div key={indexFila} className="flex">
+                                    {fila.map((letra, indexCol) => (
+                                        <div
+                                            key={`${indexFila}-${indexCol}`}
+                                            className={`${tamañoCelda} flex items-center justify-center cursor-pointer border border-gray-300 font-bold ${tamañoTexto} select-none
+                                                ${getEstiloCelda(indexFila, indexCol)}`}
+                                            onMouseDown={() => {
+                                                iniciarSeleccion();
+                                                manejarClic(indexFila, indexCol);
+                                            }}
+                                            onMouseEnter={() => entrarEnCelda(indexFila, indexCol)}
+                                        >
+                                            {letra}
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Palabra seleccionada actualmente */}
+                    <div className="mb-4 bg-white p-2 rounded shadow">
+                        <p className="text-xl font-semibold">
+                            Seleccionado: {seleccion.map(item => item.letra).join('')}
+                        </p>
+                    </div>
+                    
+                    {/* Temporizador en la esquina superior derecha */}
+                    <div className={`absolute top-4 right-4 p-2 rounded shadow ${temporizadorPausado ? 'bg-green-500' : modoFinal ? 'bg-red-600' : 'bg-blue-500'} text-white`}>
+                        <p className="font-bold">
+                            {temporizadorPausado ? '¡Juego Completado!' : 
+                            modoFinal ? '¡MODO FINAL!' : 
+                            `Cambio en: ${formatearTiempo(tiempoRestante)}`}
+                        </p>
+                    </div>
+                    
+                    {/* Lista de palabras por encontrar */}
+                    <div className={`mb-6 p-4 rounded shadow w-full max-w-md ${modoFinal ? 'bg-red-800 text-white' : 'bg-white'}`}>
+                        <h2 className="text-xl font-bold mb-2">
+                            Palabras a encontrar: {palabrasEncontradas.length}/{config.palabras.length}
+                            {modoFinal && (
+                                <span className="ml-2 text-red-300 animate-pulse">
+                                    ¡ÚLTIMO {porcentajePalabrasRestantes}% DE PALABRAS!
+                                </span>
+                            )}
+                        </h2>
+                        <div className="grid grid-cols-2 gap-2">
+                            {config.palabras.map((palabra, index) => (
+                                <div 
+                                    key={index} 
+                                    className={`p-1 rounded ${palabrasEncontradas.includes(palabra) ? 'line-through bg-green-100' : ''}`}
+                                >
+                                    {palabra}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Mensaje de victoria */}
+                    {juegoCompletado && (
+                        <div className="mb-4 p-4 bg-yellow-100 text-yellow-700 rounded shadow">
+                            <h2 className="text-2xl font-bold">¡Felicidades! Has encontrado todas las palabras.</h2>
+                            <p>Nivel completado: {dificultad.charAt(0).toUpperCase() + dificultad.slice(1)}</p>
+                            <p className="mt-2 flex items-center">
+                                <svg className="w-6 h-6 mr-1 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM5.64 13.7a6 6 0 1110.72-5.4 6 6 0 01-10.72 5.4z" fillRule="evenodd" />
+                                    <path d="M11 8a1 1 0 00-2 0v2a1 1 0 002 0V8zm-1-5a7 7 0 100 14 7 7 0 000-14z" fillRule="evenodd" />
+                                </svg>
+                                Monedas acumuladas: {monedas}
+                            </p>
+                        </div>
+                    )}
+                    
+                    {/* Pantalla de carga */}
+                    {mostrarCarga && (
+                        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                                <h2 className="text-xl font-bold mb-4 text-center">¡Cambiando letras!</h2>
+                                
+                                {/* Barra de progreso */}
+                                <div className="w-full bg-gray-200 rounded-full h-6 mb-4">
+                                    <div 
+                                        className="bg-
