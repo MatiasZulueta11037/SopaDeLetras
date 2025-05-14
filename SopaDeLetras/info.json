@@ -1,0 +1,18 @@
+{
+  "juego-compuertas-logicas": {
+	"nombre": "Juego de Compuertas Lógicas",
+	"descripcion": "Juego educativo sobre compuertas lógicas, en el que los jugadores responden preguntas para mejorar su comprensión de la lógica digital.",
+	"instrucciones": [
+  	"Al llegar a al 25 se activa el modo final",
+  	"Encuentra todas las palabras",
+  	"El juego continúa hasta que se encuentren todas las palabras."
+	],
+	"temas": [
+  	"Conocimiento Basico",
+  	"Palabras",
+  	"Pensamiento Visual"
+	],
+	“autor”:”Matias Zulueta”,
+	"url": "https:game.1001problemas.com/SopaDeLetras"
+  }
+}
